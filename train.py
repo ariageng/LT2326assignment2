@@ -14,7 +14,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--config", help="configuration file", default="config.json")
-
+parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")  # Add epochs argument
 args = parser.parse_args()
 
 config = json.load(open(args.config))
@@ -26,7 +26,7 @@ device = config["device"]
 print("Running...")
 
 
-traindataset = WikiArtDataset(trainingdir, device)
+traindataset = WikiArtDataset(trainingdir, device, test_mode=False)
 num_classes = len(traindataset.classes)
 print("Number of classes:", num_classes)
 #testingdataset = WikiArtDataset(testingdir, device)
@@ -45,7 +45,7 @@ def train(epochs=3, batch_size=32, modelfile=None, device="cpu"):
     loader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
 
     model = WikiArtModel(num_classes=len(traindataset.classes)).to(device)
-    optimizer = Adam(model.parameters(), lr=0.01)
+    optimizer = Adam(model.parameters(), lr=0.001)
     criterion = nn.NLLLoss().to(device)
     
     for epoch in range(epochs):
@@ -53,6 +53,7 @@ def train(epochs=3, batch_size=32, modelfile=None, device="cpu"):
         accumulate_loss = 0
         for batch_id, batch in enumerate(tqdm.tqdm(loader)):
             X, y = batch
+            X = X.to(device)
             y = y.to(device)
             optimizer.zero_grad()
             output = model(X)
@@ -68,4 +69,6 @@ def train(epochs=3, batch_size=32, modelfile=None, device="cpu"):
 
     return model
 
-model = train(config["epochs"], config["batch_size"], modelfile=config["modelfile"], device=device)
+
+
+model = train(args.epochs, config["batch_size"], modelfile=config["modelfile"], device=device)

@@ -1,8 +1,8 @@
 {
-    "modelfile": "wikiart.pth",
+    "modelfile": "wikiart_undersample.pth",
     "trainingdir": "/scratch/lt2326-2926-h24/wikiart/train",
     "testingdir": "/scratch/lt2326-2926-h24/wikiart/test",
     "device": "cuda:3",
-    "epochs": 20,
+    "epochs": 10,
     "batch_size": 32
 }

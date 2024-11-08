@@ -28,9 +28,10 @@ device = config["device"]
 print("Running...")
 
 #traindataset = WikiArtDataset(trainingdir, device)
-testingdataset = WikiArtDataset(testingdir, device)
-traindataset = WikiArtDataset(trainingdir, device)
-num_classes=len(traindataset.classes)
+traindataset = WikiArtDataset(trainingdir, device, test_mode=False)
+testingdataset = WikiArtDataset(testingdir, device, test_mode=True)
+num_classes=len(testingdataset.classes)
+print("classes in test set:", num_classes)
 
 def test(modelfile=None, device="cpu"):
     loader = DataLoader(testingdataset, batch_size=1)
@@ -44,6 +45,7 @@ def test(modelfile=None, device="cpu"):
     truth = []
     for batch_id, batch in enumerate(tqdm.tqdm(loader)):
         X, y = batch
+        X = X.to(device)
         y = y.to(device)
         output = model(X)
         predictions.append(torch.argmax(output).unsqueeze(dim=0))

@@ -5,10 +5,10 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision.io import read_image
 import matplotlib.pyplot as plt
-import torchvision.transforms.functional as F
+import torchvision.transforms.functional as F # image tranform
 from torch.optim import Adam
-import tqdm
-
+import tqdm #progress bar
+import random
 
 class WikiArtImage:
     def __init__(self, imgdir, label, filename):
@@ -26,7 +26,7 @@ class WikiArtImage:
         return self.image
 
 class WikiArtDataset(Dataset):
-    def __init__(self, imgdir, device="cpu"):
+    def __init__(self, imgdir, device="cpu", test_mode=False):
         walking = os.walk(imgdir)
         filedict = {}
         indices = []
@@ -41,11 +41,46 @@ class WikiArtDataset(Dataset):
                 indices.append(art)
                 classes.add(arttype)
         print("...finished")
-        self.filedict = filedict
-        self.imgdir = imgdir
-        self.indices = indices
-        self.classes = list(classes)
+
+        # Count the amount of the images for each class
+        class_counts = {}
+        for art in filedict.values():
+            if art.label not in class_counts:
+                class_counts[art.label] = 0
+            class_counts[art.label] += 1
+
+
+        if not test_mode: # only undersample when training
+        
+            print("Before undersampling:")
+            for label, count in class_counts.items():
+                print(f"{label}: {count}")
+            # Get the class with fewest data
+            min_class = min(class_counts.values())
+            print("Minimal amount of all classes:", min_class)
+
+            # Undersample
+            undersampled_filedict = {}
+            undersampled_indices = []
+            
+            random.seed(400)
+            for label in classes:
+                class_images = [name for name in filedict.keys() 
+                            if filedict[name].label == label]
+                selected = random.sample(class_images, min_class)
+                for img in selected:
+                    undersampled_filedict[img] = filedict[img]
+                    undersampled_indices.append(img)
+
+            self.filedict = undersampled_filedict
+            self.indices = undersampled_indices 
+        else:
+            self.filedict = filedict
+            self.indices = indices
+    
         self.device = device
+        self.imgdir = imgdir
+        self.classes = list(classes)
         
     def __len__(self):
         return len(self.filedict)
@@ -56,18 +91,21 @@ class WikiArtDataset(Dataset):
         ilabel = self.classes.index(imgobj.label)
         image = imgobj.get().to(self.device)
 
+        # make sure all images resized to 256x256
+        image = F.resize(image, [256, 256])
+
         return image, ilabel
 
 class WikiArtModel(nn.Module):
     def __init__(self, num_classes=27):
         super().__init__()
 
-        self.conv2d = nn.Conv2d(3, 1, (4,4), padding=2)
-        self.maxpool2d = nn.MaxPool2d((4,4), padding=2)
+        self.conv2d = nn.Conv2d(3, 32, (3,3), padding=1) # 3 channels from "RGB", output 32 channels as "features" or "pattern detectors", 3x3 kernel size
+        self.maxpool2d = nn.MaxPool2d((2,2), padding=1)
         self.flatten = nn.Flatten()
-        self.batchnorm1d = nn.BatchNorm1d(105*105)
-        self.linear1 = nn.Linear(105*105, 300)
-        self.dropout = nn.Dropout(0.01)
+        self.batchnorm1d = nn.BatchNorm1d(532512)
+        self.linear1 = nn.Linear(532512, 300)
+        self.dropout = nn.Dropout(0.3)
         self.relu = nn.ReLU()
         self.linear2 = nn.Linear(300, num_classes)
         self.softmax = nn.LogSoftmax(dim=1)

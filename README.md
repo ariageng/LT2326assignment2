@@ -1,4 +1,4 @@
-​To run train.py with 10 epochs:  train.py -e 10
+#​To run train.py with 10 epochs:  *train.py -e 10*
 ​To run autoencoder.py with 10 epochs: python autoencoder.py -e 10
 ​To run augmented_autoencoder.py with 10 epochs: python augmented_autoencoder.py -e 10
 
